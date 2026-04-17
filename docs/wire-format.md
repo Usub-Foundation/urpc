@@ -233,6 +233,27 @@ The parser validates that `msg_len` does not exceed the remaining payload
 size using an underflow-safe check (`msg_len > payload_size - 8`) to
 protect against crafted oversized lengths on 32-bit builds.
 
+### Error codes
+
+The `code` field is a uint32 with no protocol-imposed range restriction —
+handlers may return any application-specific value via `send_simple_error`.
+The following codes are used by the library itself:
+
+| Code | Origin | Meaning |
+|-----:|--------|---------|
+| 400  | Server | Bad request: encrypted payload received but no cipher is available for this connection, or AES-GCM decryption failed (invalid tag / truncated ciphertext). |
+| 404  | Server | Unknown method: no handler registered for the `method_id` in the request. |
+| 408  | Client | Request timeout: the per-call watchdog deadline expired before a response arrived. This code is set locally in `RpcCallResult.error_code` and is **never sent on the wire** — the client sends a best-effort `Cancel` frame instead. |
+| 0    | Client | Transport failure: connection closed, connect failed, write failed, or AES decrypt failed on the inbound path. Like 408, this is a local sentinel and is never transmitted. |
+
+Codes 400 and 404 travel in the error payload of a `Response` frame with
+`FLAG_ERROR`. Codes 0 and 408 are populated only in the client-side
+`RpcCallResult` / `PendingCall` and never appear on the wire.
+
+Applications are free to define their own ranges above these. A common
+convention is to mirror HTTP status semantics (2xx success, 4xx client
+error, 5xx server error) but this is not enforced by the protocol.
+
 ---
 
 # Ping / Pong frames

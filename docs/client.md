@@ -231,6 +231,19 @@ struct RpcCallResult
 The flags are mutually exclusive: exactly one of `ok`, `timed_out`, or
 `error` (i.e. `!ok && !timed_out`) is true on return.
 
+### Error codes in `RpcCallResult`
+
+| `error_code` | `timed_out` | Meaning |
+|-------------:|:-----------:|---------|
+| 0            | false       | Transport failure: connection closed, connect failed, or AES decrypt failed. `error_message` has details. |
+| 408          | true        | Per-call deadline expired. The watchdog cancelled the call locally and sent a best-effort `Cancel` frame to the server. |
+| *other*      | false       | Server returned a `FLAG_ERROR` response. `error_code` is the server's application error code (e.g. 404 for unknown method, 400 for bad request). `error_message` is the server's error text. |
+
+When `ok == true`, `error_code` is 0 and `error_message` is empty.
+
+See [wire-format.md — Error codes](wire-format.md#error-codes) for the
+full table of library-defined codes and their wire representation.
+
 ## How it works
 
 `try_call` sends the Request frame immediately, then spawns a lightweight

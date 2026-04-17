@@ -351,7 +351,26 @@ flags = END_STREAM | ERROR
 payload = [u32 code][u32 msg_len][msg bytes]
 ```
 
+### Library-defined error codes
+
+The server sends the following codes automatically before the handler is
+invoked (the handler never sees these requests):
+
+| Code | Condition |
+|-----:|-----------|
+| 404  | No handler registered for the request's `method_id`. |
+| 400  | Request payload is marked `FLAG_ENCRYPTED` but no cipher context is available for this connection, or AES-GCM decryption of the payload failed. |
+
+Handlers may send arbitrary application error codes by throwing or
+returning an error through the framework — the `code` field is a plain
+uint32 with no protocol-imposed range. A common convention is to mirror
+HTTP status semantics (4xx client error, 5xx server error), but the
+protocol does not enforce this.
+
 String-returning handlers can also throw — errors propagate normally.
+
+See [wire-format.md — Error codes](wire-format.md#error-codes) for the
+complete table including client-only codes (0, 408).
 
 ---
 
