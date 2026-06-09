@@ -55,6 +55,7 @@ nav:
       - Client: client.md
       - Client pool: client-pool.md
       - Server: server.md
+      - Request Router: router.md
       - Transport & Method IDs: transport-and-ids.md
 
 extra:

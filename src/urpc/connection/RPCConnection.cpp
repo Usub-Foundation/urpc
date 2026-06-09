@@ -58,9 +58,9 @@ namespace urpc
     }
 
     RpcConnection::RpcConnection(std::shared_ptr<IRpcStream> stream,
-                                 RpcMethodRegistry& registry)
+                                 const RpcRouter& router)
         : stream_(std::move(stream))
-          , registry_(registry)
+          , router_(router)
           , on_cancel_()
     {
 #if URPC_LOGS
@@ -71,10 +71,10 @@ namespace urpc
     }
 
     RpcConnection::RpcConnection(std::shared_ptr<IRpcStream> stream,
-                                 RpcMethodRegistry& registry,
+                                 const RpcRouter& router,
                                  RpcCancelCallback on_cancel)
         : stream_(std::move(stream))
-          , registry_(registry)
+          , router_(router)
           , on_cancel_(std::move(on_cancel))
     {
 #if URPC_LOGS
@@ -537,8 +537,8 @@ namespace urpc
             frame.header.flags);
 #endif
 
-        RpcHandlerPtr fn = this->registry_.find(frame.header.method_id);
-        if (!fn)
+        RpcRoute route = this->router_.resolve(frame.header.method_id);
+        if (!route)
         {
 #if URPC_LOGS
             usub::ulog::error(
@@ -676,7 +676,9 @@ namespace urpc
             co_return;
         }
 
-        std::vector<uint8_t> resp = co_await (*fn)(ctx, body);
+        std::vector<uint8_t> resp = route.fn
+                                        ? co_await (*route.fn)(ctx, body)
+                                        : co_await (*route.raw)(ctx, body);
 
 #if URPC_LOGS
         usub::ulog::info(

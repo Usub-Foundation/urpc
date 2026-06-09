@@ -19,7 +19,7 @@
 
 #include <urpc/datatypes/Frame.h>
 #include <urpc/context/RPCContext.h>
-#include <urpc/registry/RPCMethodRegistry.h>
+#include <urpc/router/RPCRouter.h>
 #include <urpc/transport/IRPCStream.h>
 #include <urpc/transport/IOOps.h>
 #include <urpc/utils/Endianness.h>
@@ -32,10 +32,10 @@ namespace urpc
     {
     public:
         RpcConnection(std::shared_ptr<IRpcStream> stream,
-                      RpcMethodRegistry& registry);
+                      const RpcRouter& router);
 
         RpcConnection(std::shared_ptr<IRpcStream> stream,
-                      RpcMethodRegistry& registry,
+                      const RpcRouter& router,
                       RpcCancelCallback on_cancel);
 
         static usub::uvent::task::Awaitable<void> run_detached(
@@ -68,7 +68,7 @@ namespace urpc
 
     private:
         std::shared_ptr<IRpcStream> stream_;
-        RpcMethodRegistry& registry_;
+        const RpcRouter& router_;
         RpcCancelCallback on_cancel_;
 
         usub::uvent::sync::AsyncMutex write_mutex_;

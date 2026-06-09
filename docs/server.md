@@ -102,6 +102,28 @@ This makes API development significantly simpler, especially for JSON/Glaze/YAML
 
 ---
 
+# **Routers (decoupled registration)**
+
+You do not have to bind every handler directly onto the server. You can build
+a standalone `RpcRouter` — optionally namespaced with a prefix, and holding
+**stateful** handlers — and `mount()` it onto the server:
+
+```cpp
+urpc::RpcRouter users{"User."};
+users.route("Greet", greet_handler);   // -> method id of "User.Greet"
+
+server.mount(users);                    // attach; methods are never bound directly
+```
+
+Routers compose (`merge`) and support a `fallback()` catch-all for unknown
+method ids. Handlers registered the classic way (`register_method_ct` /
+`register_method`) keep working — the server resolves a request against its
+router first, then the legacy registry, then the fallback.
+
+See [Request Router](router.md) for the full API and a runnable example.
+
+---
+
 # **When to use string-returning handlers**
 
 ### ✔ Good when:

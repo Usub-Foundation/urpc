@@ -20,6 +20,7 @@ namespace urpc
 
     RpcServer::RpcServer(RpcServerConfig cfg)
         : registry_()
+          , router_()
           , config_(std::move(cfg))
     {
 #if URPC_LOGS
@@ -30,6 +31,10 @@ namespace urpc
             this->config_.threads,
             this->config_.timeout_ms);
 #endif
+        // Handlers registered through the legacy registry() accessor still
+        // resolve: the router consults the registry as a fallback source.
+        this->router_.set_fallback_registry(&this->registry_);
+
         if (!this->config_.stream_factory)
         {
             if (this->config_.timeout_ms > 0)
@@ -54,6 +59,26 @@ namespace urpc
             static_cast<const void*>(this));
 #endif
         return this->registry_;
+    }
+
+    RpcRouter& RpcServer::router()
+    {
+#if URPC_LOGS
+        usub::ulog::debug(
+            "RpcServer::router: returning router, this={}",
+            static_cast<const void*>(this));
+#endif
+        return this->router_;
+    }
+
+    void RpcServer::mount(const RpcRouter& router)
+    {
+#if URPC_LOGS
+        usub::ulog::debug(
+            "RpcServer: mount router with {} route(s)",
+            router.size());
+#endif
+        this->router_.merge(router);
     }
 
     void RpcServer::register_method(uint64_t method_id,
@@ -207,7 +232,7 @@ namespace urpc
             }
 
             auto conn = std::make_shared<RpcConnection>(
-                stream, this->registry_, this->config_.on_request_cancelled);
+                stream, this->router_, this->config_.on_request_cancelled);
 
 #if URPC_LOGS
             usub::ulog::info(

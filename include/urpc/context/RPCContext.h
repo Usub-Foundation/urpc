@@ -69,6 +69,26 @@ namespace urpc
         RpcContext&, std::span<const uint8_t>);
 
     using RpcHandlerPtr = RpcHandlerFn*;
+
+    // Type-erased, copyable handler. Unlike RpcHandlerPtr (a plain function
+    // pointer), this can carry captured state, so routers may hold stateful
+    // handlers, closures, and middleware wrappers.
+    using RpcHandler = std::function<RpcHandlerFn>;
+
+    namespace detail
+    {
+        template <class T>
+        struct awaitable_value;
+
+        template <class T>
+        struct awaitable_value<usub::uvent::task::Awaitable<T>>
+        {
+            using type = T;
+        };
+
+        template <class T>
+        using awaitable_value_t = typename awaitable_value<T>::type;
+    }
 }
 
 #endif // RPCCONTEXT_H

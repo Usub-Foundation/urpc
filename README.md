@@ -165,6 +165,21 @@ Compile-time:
 server.register_method_ct<urpc::method_id("Example.Echo")>(handler);
 ```
 
+### Routers
+
+Methods do not have to be bound to the server directly. Build a standalone,
+composable `RpcRouter` (with namespacing, stateful handlers, and an optional
+catch-all) and mount it:
+
+```cpp
+urpc::RpcRouter users{"User."};
+users.route("Greet", greet_handler);   // method id of "User.Greet"
+
+server.mount(users);
+```
+
+See `docs/router.md` and `examples/main_router.cpp`.
+
 ---
 
 # **Optional TLS and mTLS**

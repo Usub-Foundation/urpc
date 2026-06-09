@@ -21,27 +21,13 @@
 
 #include <urpc/config/Config.h>
 #include <urpc/registry/RPCMethodRegistry.h>
+#include <urpc/router/RPCRouter.h>
 #include <urpc/connection/RPCConnection.h>
 #include <urpc/transport/IRPCStreamFactory.h>
 #include <urpc/context/RPCContext.h>
 
 namespace urpc
 {
-    namespace detail
-    {
-        template <class T>
-        struct awaitable_value;
-
-        template <class T>
-        struct awaitable_value<usub::uvent::task::Awaitable<T>>
-        {
-            using type = T;
-        };
-
-        template <class T>
-        using awaitable_value_t = typename awaitable_value<T>::type;
-    }
-
     class RpcServer
     {
     public:
@@ -53,6 +39,10 @@ namespace urpc
 
         RpcMethodRegistry& registry();
 
+        // The server's primary dispatch router. Handlers registered via the
+        // register_method* helpers and any mounted routers land here.
+        RpcRouter& router();
+
         template <uint64_t MethodId, typename F>
         void register_method_ct(F&& f)
         {
@@ -61,44 +51,17 @@ namespace urpc
                 "RpcServer: register_method_ct MethodId={}",
                 MethodId);
 #endif
-            using Functor = std::decay_t<F>;
-            static Functor func = std::forward<F>(f);
-
-            using RawRet = std::invoke_result_t<
-                Functor&,
-                RpcContext&,
-                std::span<const std::uint8_t>>;
-
-            using Result = detail::awaitable_value_t<RawRet>;
-
-            auto wrapper =
-                [](urpc::RpcContext& ctx,
-                   std::span<const std::uint8_t> body)
-                -> usub::uvent::task::Awaitable<std::vector<std::uint8_t>>
-            {
-                if constexpr (std::is_same_v<Result, std::vector<std::uint8_t>>)
-                {
-                    co_return co_await func(ctx, body);
-                }
-                else if constexpr (ByteRange<Result>)
-                {
-                    Result r = co_await func(ctx, body);
-                    co_return to_byte_vector(std::move(r));
-                }
-                else
-                {
-                    static_assert(
-                        std::is_same_v<Result, void>,
-                        "RpcServer::register_method_ct: unsupported handler result type");
-                    co_return std::vector<std::uint8_t>{};
-                }
-            };
-
-            this->register_method(MethodId, wrapper);
+            this->router_.on_ct<MethodId>(std::forward<F>(f));
         }
 
         void register_method(uint64_t method_id, RpcHandlerPtr fn);
         void register_method(std::string_view name, RpcHandlerPtr fn);
+
+        // Mount an externally-built router. Every route it carries (and its
+        // not-found handler, if the server's router has none) is merged into
+        // the server's dispatch router. Build routers in separate translation
+        // units and attach them here instead of binding each method directly.
+        void mount(const RpcRouter& router);
 
         usub::uvent::task::Awaitable<void> run_async();
         void run();
@@ -108,7 +71,8 @@ namespace urpc
 
     private:
         RpcMethodRegistry registry_;
-        RpcServerConfig config_;
+        RpcRouter         router_;
+        RpcServerConfig   config_;
     };
 }
 

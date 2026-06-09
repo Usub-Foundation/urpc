@@ -109,7 +109,8 @@ The server uses this ID to look up the registered handler.
     - Reads header (always plaintext)
     - Reads payload
     - If `FLAG_ENCRYPTED` → decrypt AES payload
-    - Looks up handler in `RpcMethodRegistry`
+    - Resolves the handler through the server's `RpcRouter`
+      (own routes → legacy `RpcMethodRegistry` → not-found fallback)
     - Invokes coroutine handler:
       ```cpp
       Awaitable<std::vector<uint8_t>>(RpcContext&, std::span<const uint8_t>)
