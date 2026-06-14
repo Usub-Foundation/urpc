@@ -1,6 +1,6 @@
 #include <urpc/client/RPCClientPool.h>
 #include <ulog/ulog.h>
-#include <cstdlib>
+#include <stdexcept>
 
 namespace urpc
 {
@@ -114,7 +114,8 @@ namespace urpc
                     "RpcClientPool::try_acquire: no clients available and "
                     "creation failed");
 #endif
-                std::abort();
+                throw std::runtime_error(
+                    "RpcClientPool::try_acquire: no clients available and creation failed");
             }
             sz = size_.load(std::memory_order_acquire);
         }
