@@ -69,6 +69,7 @@ namespace urpc
                 }
             }
 
+            sock.set_nodelay();
             auto stream = std::make_shared<TcpRpcStream>(std::move(sock));
             co_return stream;
         }
@@ -79,6 +80,7 @@ namespace urpc
         {
             if (timeout_ms_ > 0)
                 socket.set_timeout_ms(timeout_ms_);
+            socket.set_nodelay();
 
             auto stream =
                 std::make_shared<TcpRpcStream>(std::move(socket));
