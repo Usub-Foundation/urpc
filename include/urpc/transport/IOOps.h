@@ -2,6 +2,7 @@
 #define IOOPS_H
 
 #include <span>
+#include <vector>
 #include <urpc/datatypes/Frame.h>
 #include <urpc/transport/IRPCStream.h>
 
@@ -31,12 +32,14 @@ namespace urpc {
         std::span<const uint8_t> payload) {
         std::array<uint8_t, RpcFrameHeaderSize> header_buf{};
         serialize_header(hdr, header_buf.data());
+        if (payload.empty())
+            co_return co_await write_all(stream, header_buf.data(), header_buf.size());
 
-        if (!(co_await write_all(stream, header_buf.data(), header_buf.size()))) co_return false;
-        if (!payload.empty())
-            if (!(co_await write_all(stream, payload.data(), payload.size()))) co_return false;
-
-        co_return true;
+        std::vector<uint8_t> frame;
+        frame.reserve(header_buf.size() + payload.size());
+        frame.insert(frame.end(), header_buf.begin(), header_buf.end());
+        frame.insert(frame.end(), payload.begin(), payload.end());
+        co_return co_await write_all(stream, frame.data(), frame.size());
     }
 }
 

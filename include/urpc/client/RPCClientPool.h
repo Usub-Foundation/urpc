@@ -8,6 +8,7 @@
 #include <string>
 #include <limits>
 #include <memory>
+#include <mutex>
 
 #include <uvent/utils/datastructures/array/ConcurrentVector.h>
 
@@ -69,6 +70,7 @@ namespace urpc
 
     private:
         RpcClientPoolConfig cfg_;
+        std::mutex create_mx_;
         std::atomic<std::size_t> size_{0};
         std::atomic<std::size_t> rr_{0};
 
